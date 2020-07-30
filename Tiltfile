@@ -1,11 +1,14 @@
 load('ext://restart_process', 'docker_build_with_restart')
 
 IMG = 'controller:latest'
-NAME = 'test'
-DOMAIN = 'tilt.dev'
-GROUP = 'ship'
-VERSION = 'v1beta1  '
-KIND = 'Frigate'
+
+### FILL OUT THESE FIELDS
+NAME = '' # name of Go module
+DOMAIN = '' # domain for CRD
+GROUP = '' # group for CRD
+VERSION = '' # version for CRD
+KIND = '' # kind for CRD
+### END FIELDS THAT YOU NEED TO FILL OUT
 
 DOCKERFILE = '''FROM golang:alpine
 WORKDIR /
@@ -16,8 +19,6 @@ CMD ["/manager"]
 def ensure_set(name, var):
     if var == '':
         fail("%s is not set, take a look at lines 3-7 and set these variables" % name)
-
-# TODO(dmiller): embed dockerfile
 
 def yaml():
     return local('cd config/manager; kustomize edit set image controller=' + IMG + '; cd ../..; kustomize build config/default')
@@ -61,9 +62,8 @@ local_resource('crd', manifests() + 'kustomize build config/crd | kubectl apply 
 
 k8s_yaml(yaml())
 
-# TODO(dmiller): also monitor for go files inside the api directory
 deps = ['controllers', 'main.go']
-if initting:
+if initting == False:
     deps.append('api')
 local_resource('recompile', generate() + binary(), deps=deps)
 
