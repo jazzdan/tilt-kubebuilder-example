@@ -3,6 +3,11 @@ load('ext://restart_process', 'docker_build_with_restart')
 IMG = 'controller:latest'
 #docker_build(IMG, '.')
 
+# Three commands to run for this to work
+# 1. kubebuilder init (I did this)
+# 2. kubebuilder create # to create resource
+# 3. kubebuilder create # to create controller
+
 def yaml():
     return local('cd config/manager; kustomize edit set image controller=' + IMG + '; cd ../..; kustomize build config/default')
 
