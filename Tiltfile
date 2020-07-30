@@ -1,21 +1,23 @@
 load('ext://restart_process', 'docker_build_with_restart')
 
 IMG = 'controller:latest'
-#docker_build(IMG, '.')
-# TODO(dmiller): domain, group, version, kind variables
-# error if they are not filled in
-# TODO(dmiller): embed dockerfile
+NAME = 'test'
+DOMAIN = 'tilt.dev'
+GROUP = 'ship'
+VERSION = 'v1beta1  '
+KIND = 'Frigate'
 
-# Three commands to run for this to work
-# TODO(dmiller): check if `kubebuilder init` has been run
-# 1. kubebuilder init (I did this)
-#   run manifests
-#   run generate
-# TODO(run these commands)
-# 2. kubebuilder create api # to create resource
-#   THEN kustomize build | kubectl apply
-# 3. kubebuilder create controller # to create controller
-#   THEN we can recompile controller
+DOCKERFILE = '''FROM golang:alpine
+WORKDIR /
+COPY ./bin/manager /
+CMD ["/manager"]
+'''
+
+def ensure_set(name, var):
+    if var == '':
+        fail("%s is not set, take a look at lines 3-7 and set these variables" % name)
+
+# TODO(dmiller): embed dockerfile
 
 def yaml():
     return local('cd config/manager; kustomize edit set image controller=' + IMG + '; cd ../..; kustomize build config/default')
@@ -32,6 +34,25 @@ def vetfmt():
 def binary():
     return 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o bin/manager main.go'
 
+ensure_set("NAME", NAME)
+ensure_set("DOMAIN", DOMAIN)
+ensure_set("GROUP", GROUP)
+ensure_set("VERSION", VERSION)
+ensure_set("KIND", KIND)
+
+initting = False
+if os.path.exists('go.mod') == False:
+    initting = True
+    local("go mod init %s" % NAME)
+
+if os.path.exists('PROJECT') == False:
+    initting = True
+    local("kubebuilder init --domain %s" % DOMAIN)
+
+if os.path.exists('api') == False:
+    initting = True
+    local("kubebuilder create api --resource --controller --group %s --version %s --kind %s" % (GROUP, VERSION, KIND))
+
 local(manifests() + generate())
 
 local_resource('crd', manifests() + 'kustomize build config/crd | kubectl apply -f -', deps=["api"])
@@ -41,10 +62,13 @@ local_resource('crd', manifests() + 'kustomize build config/crd | kubectl apply 
 k8s_yaml(yaml())
 
 # TODO(dmiller): also monitor for go files inside the api directory
-local_resource('recompile', generate() + binary(), deps=['controllers', 'main.go'])
+deps = ['controllers', 'main.go']
+if initting:
+    deps.append('api')
+local_resource('recompile', generate() + binary(), deps=deps)
 
 docker_build_with_restart(IMG, '.', 
- dockerfile='tilt.docker',
+ dockerfile_contents=DOCKERFILE,
  entrypoint='/manager',
  only=['./bin/manager'],
  live_update=[
