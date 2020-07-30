@@ -4,9 +4,15 @@ IMG = 'controller:latest'
 #docker_build(IMG, '.')
 
 # Three commands to run for this to work
+# TODO(dmiller): check if `kubebuilder init` has been run
 # 1. kubebuilder init (I did this)
-# 2. kubebuilder create # to create resource
-# 3. kubebuilder create # to create controller
+#   run manifests
+#   run generate
+# TODO()
+# 2. kubebuilder create api # to create resource
+#   THEN kustomize build | kubectl apply
+# 3. kubebuilder create controller # to create controller
+#   THEN we can recompile controller
 
 def yaml():
     return local('cd config/manager; kustomize edit set image controller=' + IMG + '; cd ../..; kustomize build config/default')
