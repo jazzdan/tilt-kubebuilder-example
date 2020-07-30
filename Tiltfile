@@ -2,13 +2,16 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 IMG = 'controller:latest'
 #docker_build(IMG, '.')
+# TODO(dmiller): domain, group, version, kind variables
+# error if they are not filled in
+# TODO(dmiller): embed dockerfile
 
 # Three commands to run for this to work
 # TODO(dmiller): check if `kubebuilder init` has been run
 # 1. kubebuilder init (I did this)
 #   run manifests
 #   run generate
-# TODO()
+# TODO(run these commands)
 # 2. kubebuilder create api # to create resource
 #   THEN kustomize build | kubectl apply
 # 3. kubebuilder create controller # to create controller
@@ -37,6 +40,7 @@ local_resource('crd', manifests() + 'kustomize build config/crd | kubectl apply 
 
 k8s_yaml(yaml())
 
+# TODO(dmiller): also monitor for go files inside the api directory
 local_resource('recompile', generate() + binary(), deps=['controllers', 'main.go'])
 
 docker_build_with_restart(IMG, '.', 
